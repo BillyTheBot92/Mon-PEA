@@ -13,13 +13,13 @@ const PRECACHE_URLS = [
   './chart.umd.js',
   './manifest.json',
   './icon.png',
-  './fonts/inter-400.woff2',
-  './fonts/inter-600.woff2',
-  './fonts/inter-700.woff2',
-  './fonts/inter-800.woff2',
-  './fonts/inter-900.woff2',
-  './fonts/jetbrains-mono-500.woff2',
-  './fonts/jetbrains-mono-700.woff2'
+  './inter-400.woff2',
+  './inter-600.woff2',
+  './inter-700.woff2',
+  './inter-800.woff2',
+  './inter-900.woff2',
+  './jetbrains-mono-500.woff2',
+  './jetbrains-mono-700.woff2'
 ];
 
 // ── INSTALL : pré-cache les fichiers critiques ──
