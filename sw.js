@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════
-// SERVICE WORKER - Mon PEA v3.4
+// SERVICE WORKER - Mon PEA v3.4.2
 // Cache offline + démarrage rapide + notifications background
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'monpea-v3.4.1-' + Date.now();
+const CACHE_VERSION = 'monpea-v3.4.2-' + Date.now();
 const CACHE_NAME = 'monpea-cache';
 
 const PRECACHE_URLS = [
@@ -188,4 +188,4 @@ async function checkPriceAlerts(alerts) {
   }
 }
 
-console.log('[SW] Service Worker Mon PEA v3.4 chargé');
+console.log('[SW] Service Worker Mon PEA v3.4.2 chargé');
