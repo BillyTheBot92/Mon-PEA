@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Mon PEA v3.4.2</title>
+<title>Mon PEA v3.4.3</title>
 <meta name="theme-color" content="#0c0c10">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="fonts.css">
@@ -250,7 +250,7 @@ canvas{display:block;width:100%!important}
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="live-dot" id="live-dot"></div>
-  <div class="app-title">Mon PEA <span class="app-version">v3.4.2</span></div>
+  <div class="app-title">Mon PEA <span class="app-version">v3.4.3</span></div>
   <div class="topbar-right">
     <div class="topbar-price" id="topbar-price" style="display:none">
       <div class="tp-val" id="tp-val">—</div>
@@ -1051,12 +1051,39 @@ function openFullscreenChart(which){
   '</div>';
   document.body.insertAdjacentHTML('beforeend',html);
 
-  // Try to lock orientation to landscape
-  if(screen.orientation && screen.orientation.lock){
-    try{ screen.orientation.lock('landscape').catch(function(){}); }catch(e){}
+  // Request fullscreen API first (required for orientation lock on Android Chrome)
+  var overlay=document.getElementById('fs-chart-overlay');
+  var fsPromise=null;
+  if(overlay.requestFullscreen){
+    fsPromise=overlay.requestFullscreen().catch(function(){return null;});
+  }else if(overlay.webkitRequestFullscreen){
+    try{ overlay.webkitRequestFullscreen(); fsPromise=Promise.resolve(); }catch(e){ fsPromise=Promise.resolve(); }
+  }else{
+    fsPromise=Promise.resolve();
   }
 
-  // Render the chart
+  // After fullscreen is active, lock to landscape
+  fsPromise.then(function(){
+    if(screen.orientation && screen.orientation.lock){
+      try{ screen.orientation.lock('landscape').catch(function(){}); }catch(e){}
+    }
+    // Redraw after rotation (canvas needs to re-fit new dimensions)
+    setTimeout(function(){drawFullscreenChart(which);}, 250);
+  });
+
+  // Listen for user exiting fullscreen via system back/Esc → close overlay too
+  function fsChangeHandler(){
+    if(!document.fullscreenElement && !document.webkitFullscreenElement){
+      document.removeEventListener('fullscreenchange', fsChangeHandler);
+      document.removeEventListener('webkitfullscreenchange', fsChangeHandler);
+      var el=document.getElementById('fs-chart-overlay');
+      if(el) closeFullscreenChart();
+    }
+  }
+  document.addEventListener('fullscreenchange', fsChangeHandler);
+  document.addEventListener('webkitfullscreenchange', fsChangeHandler);
+
+  // Initial render (will be redrawn after rotation)
   setTimeout(function(){drawFullscreenChart(which);}, 50);
 }
 
@@ -1064,9 +1091,15 @@ function closeFullscreenChart(){
   var el=document.getElementById('fs-chart-overlay');
   if(el) el.remove();
   if(chartInsts['fs']) chartInsts['fs'].destroy();
-  // Unlock orientation
+  // Unlock orientation BEFORE exiting fullscreen
   if(screen.orientation && screen.orientation.unlock){
     try{ screen.orientation.unlock(); }catch(e){}
+  }
+  // Exit fullscreen API
+  if(document.fullscreenElement && document.exitFullscreen){
+    document.exitFullscreen().catch(function(){});
+  }else if(document.webkitFullscreenElement && document.webkitExitFullscreen){
+    try{ document.webkitExitFullscreen(); }catch(e){}
   }
 }
 
