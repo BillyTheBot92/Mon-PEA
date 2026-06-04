@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Mon PEA v3.4.3</title>
+<title>Mon PEA v3.4.4</title>
 <meta name="theme-color" content="#0c0c10">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="fonts.css">
@@ -250,7 +250,7 @@ canvas{display:block;width:100%!important}
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="live-dot" id="live-dot"></div>
-  <div class="app-title">Mon PEA <span class="app-version">v3.4.3</span></div>
+  <div class="app-title">Mon PEA <span class="app-version">v3.4.4</span></div>
   <div class="topbar-right">
     <div class="topbar-price" id="topbar-price" style="display:none">
       <div class="tp-val" id="tp-val">—</div>
@@ -945,7 +945,7 @@ function renderPortfolio(a){
   html+='<input class="alert-inp" type="number" step="0.01" placeholder="ex: 6.00" value="'+(a.alerts&&a.alerts.high||'')+'" id="alert-high">';
   html+='<span style="font-size:11px;color:var(--text3);">Bas :</span>';
   html+='<input class="alert-inp" type="number" step="0.01" placeholder="ex: 5.00" value="'+(a.alerts&&a.alerts.low||'')+'" id="alert-low">';
-  html+='<button class="btn btn-ghost" style="font-size:11px;padding:6px 12px;" onclick="saveAlerts()">Sauver</button>';
+  html+='<button id="alert-save-btn" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;transition:.2s;" onclick="saveAlerts()">Sauver</button>';
   html+='</div>';
   html+='</div>';
   // Remove asset
@@ -961,7 +961,14 @@ function saveAlerts(){
   var l=parseFloat(document.getElementById('alert-low').value);
   a.alerts={high:isNaN(h)?null:h,low:isNaN(l)?null:l};
   saveAll();
-  showAlert('✅ Alertes sauvegardées pour '+a.ticker);
+  // Feedback visuel direct sur le bouton (garanti visible)
+  var btn=document.getElementById('alert-save-btn');
+  if(btn){
+    var orig=btn.textContent, origBg=btn.style.background, origCol=btn.style.color, origBor=btn.style.borderColor;
+    btn.textContent='✓ Sauvegardé';
+    btn.style.background='#3FD68C'; btn.style.color='#06101e'; btn.style.borderColor='#3FD68C';
+    setTimeout(function(){btn.textContent=orig;btn.style.background=origBg;btn.style.color=origCol;btn.style.borderColor=origBor;},2000);
+  }
 }
 
 // ════════════════════════════════════════
