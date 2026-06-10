@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════
-// SERVICE WORKER - Mon PEA v3.4.2
+// SERVICE WORKER - HOME PEA v3.5.0
 // Cache offline + démarrage rapide + notifications background
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'monpea-v3.4.2-' + Date.now();
+const CACHE_VERSION = 'monpea-v3.5.0-' + Date.now();
 const CACHE_NAME = 'monpea-cache';
 
 const PRECACHE_URLS = [
@@ -12,7 +12,10 @@ const PRECACHE_URLS = [
   './fonts.css',
   './chart.umd.js',
   './manifest.json',
-  './icon.png',
+  './icon-192.png',
+  './icon-512.png',
+  './favicon-32.png',
+  './apple-touch-icon.png',
   './inter-400.woff2',
   './inter-600.woff2',
   './inter-700.woff2',
@@ -105,8 +108,8 @@ self.addEventListener('push', function(event) {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Mon PEA', {
       body: data.body || '',
-      icon: data.icon || './icon.png',
-      badge: './icon.png',
+      icon: data.icon || './icon-192.png',
+      badge: './icon-192.png',
       tag: data.tag || 'monpea-notif',
       requireInteraction: data.requireInteraction || false,
       data: data
@@ -163,8 +166,8 @@ async function checkMonthlyDCA() {
     // Notification de rappel
     await self.registration.showNotification('💰 C\'est l\'heure de ton DCA !', {
       body: 'N\'oublie pas ton versement mensuel et ton achat. Ouvre l\'appli pour voir les détails.',
-      icon: './icon.png',
-      badge: './icon.png',
+      icon: './icon-192.png',
+      badge: './icon-192.png',
       tag: 'dca-reminder-' + today.getFullYear() + '-' + today.getMonth(),
       requireInteraction: true
     });
@@ -179,8 +182,8 @@ async function checkPriceAlerts(alerts) {
     if (alert.triggered) {
       await self.registration.showNotification('🔔 Alerte prix ' + alert.ticker, {
         body: alert.message,
-        icon: './icon.png',
-        badge: './icon.png',
+        icon: './icon-192.png',
+        badge: './icon-192.png',
         tag: 'price-alert-' + alert.ticker,
         requireInteraction: true
       });

@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Mon PEA v3.5.0</title>
-<meta name="theme-color" content="#0c0c10">
+<title>HOME PEA</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0c0c10">
 <link rel="stylesheet" href="fonts.css">
 <script src="chart.umd.js"></script>
 <style>
@@ -249,8 +251,11 @@ canvas{display:block;width:100%!important}
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <div class="live-dot" id="live-dot"></div>
-  <div class="app-title">Mon PEA <span class="app-version">v3.5.0</span></div>
+  <div style="position:relative;flex-shrink:0;">
+    <img src="icon-192.png" alt="HOME PEA" style="width:28px;height:28px;border-radius:7px;display:block;">
+    <div class="live-dot" id="live-dot" style="position:absolute;bottom:-2px;right:-2px;border:2px solid var(--bg);"></div>
+  </div>
+  <div class="app-title">HOME PEA <span class="app-version">v3.5.0</span></div>
   <div class="topbar-right">
     <div class="topbar-price" id="topbar-price" style="display:none">
       <div class="tp-val" id="tp-val">—</div>
@@ -775,6 +780,14 @@ function removeAsset(id){
 // ════════════════════════════════════════
 // NAV
 // ════════════════════════════════════════
+function updateNavVisibility(ca){
+  // En vue globale (pas d'actif), masquer Graphique(1) et Opérations(2)
+  var hasAsset=!!ca;
+  var btns=document.querySelectorAll('.nav-btn');
+  if(btns[1]) btns[1].style.display=hasAsset?'':'none';
+  if(btns[2]) btns[2].style.display=hasAsset?'':'none';
+}
+
 function goTab(idx,btn){
   currentTab=idx;
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
@@ -790,6 +803,12 @@ function render(){
   // Destroy old charts
   Object.keys(chartInsts).forEach(function(k){if(chartInsts[k])chartInsts[k].destroy();delete chartInsts[k];});
   var ca=curAsset();
+  // Vue globale : Graphique(1) et Opérations(2) masqués → rediriger vers Portefeuille(0)
+  if(!ca && (currentTab===1 || currentTab===2)){
+    currentTab=0;
+    document.querySelectorAll('.nav-btn').forEach(function(b,i){b.classList.toggle('active',i===0);});
+  }
+  updateNavVisibility(ca);
   var html='';
   // Onglets globaux (accessibles même sans actif sélectionné)
   if(currentTab===3){
@@ -818,6 +837,7 @@ function render(){
     postRenderConsolidated();
   } else {
     switch(currentTab){
+      case 0: postRenderPortfolio(ca); break;
       case 1: postRenderChart(ca); break;
     }
   }
@@ -887,6 +907,32 @@ function drawPerfChart(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return (c.parsed.y>=0?'+':'')+fE(c.parsed.y);}}}},
     scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#55556a',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#55556a',font:{size:10},callback:function(v){return fE(v,0);}}}}}
   });
+}
+
+// Graphe perf mensuelle filtré sur un seul ETF
+function drawPerfChartAsset(a){
+  var cv=document.getElementById('perf-chart-asset');if(!cv)return;
+  var monthly={};
+  a.deps.forEach(function(d){
+    var k=d.date.substring(0,7);
+    if(!monthly[k])monthly[k]={invested:0,curVal:0};
+    monthly[k].invested+=d.amount;
+    monthly[k].curVal+=d.parts*a.price;
+  });
+  var months=Object.keys(monthly).sort();
+  var labels=months.map(function(m){var p=m.split('-');return ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][parseInt(p[1])-1]+' '+p[0].substring(2);});
+  var pvs=months.map(function(m){return parseFloat((monthly[m].curVal-monthly[m].invested).toFixed(2));});
+  cv.height=160;
+  chartInsts['perfAsset']=new Chart(cv.getContext('2d'),{
+    type:'bar',
+    data:{labels:labels,datasets:[{label:'Gains',data:pvs,backgroundColor:pvs.map(function(v){return v>=0?'rgba(0,224,122,0.6)':'rgba(255,68,102,0.6)';}),borderColor:pvs.map(function(v){return v>=0?'#00e07a':'#ff4466';}),borderWidth:1,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return (c.parsed.y>=0?'+':'')+fE(c.parsed.y);}}}},
+    scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#55556a',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#55556a',font:{size:10},callback:function(v){return fE(v,0);}}}}}
+  });
+}
+
+function postRenderPortfolio(a){
+  if(a&&a.deps&&a.deps.length>0)drawPerfChartAsset(a);
 }
 
 function selectAssetById(id){
@@ -977,6 +1023,11 @@ function renderPortfolio(a){
   html+='<button id="alert-save-btn" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;transition:.2s;" onclick="saveAlerts()">Sauver</button>';
   html+='</div>';
   html+='</div>';
+  // Performance mensuelle de cet ETF
+  if(a.deps&&a.deps.length>0){
+    html+='<div class="card"><div class="card-hd">Performance mensuelle</div>';
+    html+='<div style="height:180px;"><canvas id="perf-chart-asset"></canvas></div></div>';
+  }
   // Remove asset
   if(assets.length>1){
     html+='<div style="text-align:center;padding:8px 0;"><button class="btn btn-red" onclick="removeAsset(\''+a.id+'\')">🗑 Supprimer cet actif</button></div>';
@@ -1440,7 +1491,7 @@ function renderHistory(a){
   a.virements.forEach(function(v){var k=v.date.substring(0,7);if(!byM[k])byM[k]={deps:[],virs:[]};byM[k].virs.push(v);});
   var months=Object.keys(byM).sort(function(x,y){return y.localeCompare(x);});
   if(!months.length)return '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px;">Aucune opération</div>';
-  return months.map(function(mk_){
+  var blocks=months.map(function(mk_){
     var g=byM[mk_];var mp=mk_.split('-');
     var mlbl=MN[parseInt(mp[1])-1]+' '+mp[0];
     var totV=g.virs.reduce(function(s,v){return s+v.amount;},0);
@@ -1506,7 +1557,32 @@ function renderHistory(a){
     }
     html+='</div>';
     return html;
-  }).join('');
+  });
+  // Limiter à 5 mois par défaut + bouton "Voir tout" (déroule sur place)
+  var LIMIT=5;
+  if(blocks.length<=LIMIT){
+    return blocks.join('');
+  }
+  var visible=blocks.slice(0,LIMIT).join('');
+  var hidden=blocks.slice(LIMIT).join('');
+  var out=visible;
+  out+='<div id="hist-more" style="display:none;">'+hidden+'</div>';
+  out+='<button class="btn btn-ghost" style="width:100%;margin-top:8px;justify-content:center;" id="hist-toggle" onclick="toggleHistMore()">▾ Voir tout l\'historique ('+(blocks.length-LIMIT)+' mois de plus)</button>';
+  return out;
+}
+
+function toggleHistMore(){
+  var more=document.getElementById('hist-more');
+  var btn=document.getElementById('hist-toggle');
+  if(!more||!btn)return;
+  if(more.style.display==='none'){
+    more.style.display='block';
+    btn.textContent='▴ Réduire l\'historique';
+  } else {
+    more.style.display='none';
+    btn.textContent='▾ Voir tout l\'historique';
+    btn.scrollIntoView({behavior:'smooth',block:'center'});
+  }
 }
 
 function previewForm(){
@@ -1929,7 +2005,7 @@ function renderSettings(){
   html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;">Ouvre cette page dans Chrome → Menu (⋮) → "Ajouter à l\'écran d\'accueil". Tu auras une vraie icône d\'appli en plein écran sans la barre du navigateur.</div>';
   html+='</div>';
 
-  html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px;">Mon PEA v3.5.0</div>';
+  html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px;">HOME PEA v3.5.0</div>';
 
   return html;
 }
