@@ -3,8 +3,8 @@
 // Cache offline + démarrage rapide + notifications background
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'monpea-v3.5.0-' + Date.now();
-const CACHE_NAME = 'monpea-cache';
+const SW_VERSION = '3.5.1';
+const CACHE_NAME = 'monpea-v' + SW_VERSION;
 
 const PRECACHE_URLS = [
   './',
@@ -27,7 +27,7 @@ const PRECACHE_URLS = [
 
 // ── INSTALL : pré-cache les fichiers critiques ──
 self.addEventListener('install', function(event) {
-  console.log('[SW] Installation v3.4');
+  console.log('[SW] Installation v' + SW_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(PRECACHE_URLS).catch(function(err) {

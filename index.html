@@ -2331,6 +2331,17 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then(function(reg) {
         console.log('[App] SW registered, scope:', reg.scope);
+        // ═══ AUTO-UPDATE : recharge la page quand une nouvelle version est détectée ═══
+        reg.onupdatefound = function() {
+          var newSW = reg.installing;
+          if (!newSW) return;
+          newSW.onstatechange = function() {
+            if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
+              console.log('[App] Nouvelle version détectée, rechargement...');
+              window.location.reload();
+            }
+          };
+        };
         // Try to enable periodic background sync (Chrome only)
         if ('periodicSync' in reg) {
           navigator.permissions.query({name: 'periodic-background-sync'}).then(function(p) {
