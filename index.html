@@ -605,6 +605,22 @@ async function doRefresh(){
 // ════════════════════════════════════════
 // ALERTS
 // ════════════════════════════════════════
+function freshnessLabel(a){
+  if(!a.lastFetchTime) return {text:'Jamais actualisé', color:'var(--text3)'};
+  // Calcul du delta en minutes depuis le dernier fetch (stocké en HH:MM:SS)
+  var now=new Date();
+  var parts=a.lastFetchTime.split(':');
+  var fetchD=new Date(now.getFullYear(),now.getMonth(),now.getDate(),parts[0],parts[1],parts[2]||0);
+  var diffMin=Math.round((now-fetchD)/60000);
+  if(diffMin<0) diffMin=0;
+  var txt,col;
+  if(diffMin<2){txt='À l\'instant';col='var(--green)';}
+  else if(diffMin<10){txt='Il y a '+diffMin+' min';col='var(--green)';}
+  else if(diffMin<30){txt='Il y a '+diffMin+' min';col='var(--gold)';}
+  else {txt='Il y a '+diffMin+' min — à actualiser';col='var(--red)';}
+  return {text:txt,color:col};
+}
+
 function checkAlerts(a){
   if(!a.alerts) return;
   if(a.alerts.high && a.price>=a.alerts.high){
@@ -914,6 +930,7 @@ function renderConsolidated(){
     var pct100=g.totalVal>0?(st.curV/g.totalVal*100).toFixed(0):0;
     html+='<div class="asset-row" onclick="selectAssetById(\''+a.id+'\')">';
     html+='<div class="ar-left"><div class="ar-dot" style="background:'+a.color+'"></div><div><div class="ar-name">'+a.ticker.replace('.PA','')+'</div><div class="ar-ticker">'+a.name.substring(0,28)+'…</div></div></div>';
+    html+='<canvas class="spark-cv" id="spark-'+a.id+'" width="60" height="28" style="margin:0 8px;flex-shrink:0;"></canvas>';
     html+='<div class="ar-right"><div class="ar-val">'+fE(st.curV)+'</div>';
     html+='<div class="ar-pv" style="color:'+pvCol+'">'+sg(st.pv)+fE(st.pv)+' ('+sg(st.pvPct)+st.pvPct.toFixed(1)+'%)</div>';
     html+='<div style="font-size:10px;color:var(--text3);margin-top:2px;">'+pct100+'% du portef. · '+a.price.toFixed(3)+'€</div>';
@@ -936,6 +953,37 @@ function renderConsolidated(){
 function postRenderConsolidated(){
   drawPerfChart();
   drawPieChart();
+  drawSparklines();
+}
+
+function drawSparklines(){
+  assets.forEach(function(a){
+    var cv=document.getElementById('spark-'+a.id);
+    if(!cv) return;
+    var key=a.ticker+'_1mo';
+    var data=histData[key];
+    if(!data || data.length<2){
+      // Pas de données en cache, fetch en arrière-plan pour la prochaine fois
+      fetchHistory(a.ticker,'1mo').then(function(){drawSparklines();});
+      return;
+    }
+    var ctx=cv.getContext('2d');
+    var w=cv.width,h=cv.height;
+    ctx.clearRect(0,0,w,h);
+    var values=data.map(function(d){return d.v;});
+    var min=Math.min.apply(null,values),max=Math.max.apply(null,values);
+    var range=max-min||1;
+    var up=values[values.length-1]>=values[0];
+    ctx.beginPath();
+    ctx.strokeStyle=up?'#00e07a':'#ff4466';
+    ctx.lineWidth=1.5;
+    values.forEach(function(v,i){
+      var x=(i/(values.length-1))*w;
+      var y=h-((v-min)/range)*h;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
 }
 
 function drawPieChart(){
@@ -1046,12 +1094,14 @@ function renderPortfolio(a){
   var chg=a.price-a.prev,pct=a.prev>0?(chg/a.prev*100):0;
   var pvCol=st.pv>=0?'var(--green)':'var(--red)';
   var open=isOpen();
-  // TWR annualisé DCAM (base : 4,753€ au 11 mars 2025)
+  // TWR annualisé — basé sur le tout premier achat de CET ETF
   var twr=null;
-  if(a.ticker==='DCAM.PA'){
-    var incPrice=4.753, incDate=new Date('2025-03-11');
+  if(a.deps && a.deps.length>0){
+    var sortedDeps=a.deps.slice().sort(function(x,y){return new Date(x.date)-new Date(y.date);});
+    var firstDep=sortedDeps[0];
+    var incPrice=firstDep.price, incDate=new Date(firstDep.date);
     var yrs=(new Date()-incDate)/(1000*60*60*24*365.25);
-    if(a.price>0 && yrs>0){ twr=(Math.pow(a.price/incPrice,1/yrs)-1)*100; }
+    if(a.price>0 && incPrice>0 && yrs>0.02){ twr=(Math.pow(a.price/incPrice,1/yrs)-1)*100; }
   }
   var html='';
   // Hero
@@ -1070,14 +1120,16 @@ function renderPortfolio(a){
   html+='<div class="grid2" style="margin-bottom:0">';
   html+='<div class="mini-card bc-blue"><div class="mc-l b">Ma performance</div><div class="mc-v" style="color:var(--blue)">'+sg(st.pvPct)+st.pvPct.toFixed(2)+'%</div><div class="mc-sub">depuis mes achats</div></div>';
   if(twr!==null){
-    html+='<div class="mini-card bc-green"><div class="mc-l g">TWR du marché</div><div class="mc-v" style="color:var(--green)">'+sg(twr)+twr.toFixed(2)+'%</div><div class="mc-sub">/an depuis création</div></div>';
+    html+='<div class="mini-card bc-green"><div class="mc-l g">TWR annualisé</div><div class="mc-v" style="color:var(--green)">'+sg(twr)+twr.toFixed(2)+'%</div><div class="mc-sub">/an depuis 1er achat</div></div>';
   } else {
-    html+='<div class="mini-card"><div class="mc-l">TWR du marché</div><div class="mc-v" style="color:var(--text3)">—</div><div class="mc-sub">DCAM uniquement</div></div>';
+    html+='<div class="mini-card"><div class="mc-l">TWR annualisé</div><div class="mc-v" style="color:var(--text3)">—</div><div class="mc-sub">historique trop court</div></div>';
   }
   html+='</div></div>';
   // Price card
   html+='<div class="card">';
+  var fresh=freshnessLabel(a);
   html+='<div class="card-hd">Prix en direct <span style="font-size:10px;color:var(--text3);font-weight:400;" id="price-source">Yahoo ~1-2min</span></div>';
+  html+='<div style="font-size:11px;color:'+fresh.color+';font-weight:700;margin-bottom:4px;">🕐 '+fresh.text+'</div>';
   html+='<div class="price-big">'+a.price.toFixed(3)+'€</div>';
   html+='<div class="price-chg '+(chg>=0?'up':'down')+'">'+(chg>=0?'▲':'▼')+' '+sg(chg)+chg.toFixed(3)+'€ ('+sg(pct)+pct.toFixed(2)+'%) aujourd\'hui</div>';
   html+='<div style="font-size:10px;color:var(--text3);margin-top:4px;" id="last-update">—</div>';
@@ -1990,9 +2042,38 @@ function getInsights(a){
 }
 
 function renderAssistant(){
-  var a=curAsset()||assets[0];
-  var ins=getInsights(a);
+  var ca=curAsset();
   var html='';
+
+  // ── Mode Vue Globale : alertes contextuelles sur TOUS les actifs ──
+  if(!ca){
+    html+='<div class="card"><div class="card-hd">🔔 Alertes contextuelles · Tous tes actifs</div>';
+    var anyAlert=false;
+    assets.forEach(function(ast){
+      var ins2=getInsights(ast);
+      if(!ins2) return;
+      var notable=ins2.signals.filter(function(s){return s.type==='good'||s.type==='caution';});
+      if(notable.length===0) return;
+      anyAlert=true;
+      notable.forEach(function(s){
+        var col=s.type==='good'?'var(--green)':'var(--gold)';
+        var bg=s.type==='good'?'var(--gdim)':'var(--goldim)';
+        html+='<div style="background:'+bg+';border-left:3px solid '+col+';border-radius:var(--r3);padding:10px 12px;margin-bottom:8px;">';
+        html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><span style="font-size:14px;">'+s.icon+'</span><span style="font-size:12px;font-weight:700;color:'+col+';">'+ast.ticker.replace('.PA','')+' — '+s.title+'</span></div>';
+        html+='<div style="font-size:11px;color:var(--text2);line-height:1.4;">'+s.detail+'</div>';
+        html+='</div>';
+      });
+    });
+    if(!anyAlert){
+      html+='<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px;">Aucun signal particulier en ce moment. Continue ta routine DCA.</div>';
+    }
+    html+='</div>';
+    html+='<div class="card"><div style="text-align:center;padding:16px;color:var(--text3);font-size:12px;">Sélectionne un actif pour voir son diagnostic détaillé.</div></div>';
+    return html;
+  }
+
+  var a=ca;
+  var ins=getInsights(a);
 
   // ── Carte verdict global ──
   if(ins){
