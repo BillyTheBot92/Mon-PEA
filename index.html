@@ -257,7 +257,7 @@ canvas{display:block;width:100%!important}
     <img src="icon-192.png" alt="HOME PEA" style="width:28px;height:28px;border-radius:7px;display:block;">
     <div class="live-dot" id="live-dot" style="position:absolute;bottom:-2px;right:-2px;border:2px solid var(--bg);"></div>
   </div>
-  <div class="app-title">HOME PEA <span class="app-version">v3.5.6</span></div>
+  <div class="app-title">HOME PEA <span class="app-version">v3.5.7</span></div>
   <div class="topbar-right">
     <div class="topbar-price" id="topbar-price" style="display:none">
       <div class="tp-val" id="tp-val">—</div>
@@ -950,7 +950,7 @@ function renderConsolidated(){
     var pct100=g.totalVal>0?(st.curV/g.totalVal*100).toFixed(0):0;
     html+='<div class="asset-row" onclick="selectAssetById(\''+a.id+'\')">';
     html+='<div class="ar-left"><div class="ar-dot" style="background:'+a.color+'"></div><div><div class="ar-name">'+a.ticker.replace('.PA','')+'</div><div class="ar-ticker">'+a.name.substring(0,28)+'…</div></div></div>';
-    html+='<canvas class="spark-cv" id="spark-'+a.id+'" width="60" height="28" style="width:60px;height:28px;flex-shrink:0;margin:0 6px;opacity:0.85;"></canvas>';
+
     html+='<div class="ar-right"><div class="ar-val">'+fE(st.curV)+'</div>';
     html+='<div class="ar-pv" style="color:'+pvCol+'">'+sg(st.pv)+fE(st.pv)+' ('+sg(st.pvPct)+st.pvPct.toFixed(1)+'%)</div>';
     html+='<div style="font-size:10px;color:var(--text3);margin-top:2px;">'+pct100+'% du portef. · '+a.price.toFixed(3)+'€</div>';
@@ -973,40 +973,6 @@ function renderConsolidated(){
 function postRenderConsolidated(){
   drawPerfChart();
   drawPieChart();
-  drawSparklines();
-}
-
-function drawSparklines(){
-  assets.forEach(function(a){
-    var cv=document.getElementById('spark-'+a.id);
-    if(!cv) return;
-    // Forcer taille fixe
-    cv.width=60; cv.height=28;
-    cv.style.width='60px'; cv.style.height='28px';
-    var key=a.ticker+'_1mo';
-    var data=histData[key];
-    if(!data || data.length<2){
-      // Pas de données en cache, fetch en arrière-plan pour la prochaine fois
-      fetchHistory(a.ticker,'1mo').then(function(){drawSparklines();});
-      return;
-    }
-    var ctx=cv.getContext('2d');
-    var w=cv.width,h=cv.height;
-    ctx.clearRect(0,0,w,h);
-    var values=data.map(function(d){return d.v;});
-    var min=Math.min.apply(null,values),max=Math.max.apply(null,values);
-    var range=max-min||1;
-    var up=values[values.length-1]>=values[0];
-    ctx.beginPath();
-    ctx.strokeStyle=up?'#00e07a':'#ff4466';
-    ctx.lineWidth=1.5;
-    values.forEach(function(v,i){
-      var x=(i/(values.length-1))*w;
-      var y=h-((v-min)/range)*h;
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    });
-    ctx.stroke();
-  });
 }
 
 function drawPieChart(){
@@ -2387,7 +2353,7 @@ function renderSettings(){
   html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;">Ouvre cette page dans Chrome → Menu (⋮) → "Ajouter à l\'écran d\'accueil". Tu auras une vraie icône d\'appli en plein écran sans la barre du navigateur.</div>';
   html+='</div>';
 
-  html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px;">HOME PEA v3.5.6</div>';
+  html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px;">HOME PEA v3.5.7</div>';
 
   return html;
 }
