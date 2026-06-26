@@ -257,7 +257,7 @@ canvas{display:block;width:100%!important}
     <img src="icon-192.png" alt="HOME PEA" style="width:28px;height:28px;border-radius:7px;display:block;">
     <div class="live-dot" id="live-dot" style="position:absolute;bottom:-2px;right:-2px;border:2px solid var(--bg);"></div>
   </div>
-  <div class="app-title">HOME PEA <span class="app-version">v3.5.7</span></div>
+  <div class="app-title">HOME PEA <span class="app-version">v3.5.8</span></div>
   <div class="topbar-right">
     <div class="topbar-price" id="topbar-price" style="display:none">
       <div class="tp-val" id="tp-val">—</div>
@@ -2353,7 +2353,7 @@ function renderSettings(){
   html+='<div style="font-size:11px;color:var(--text2);line-height:1.5;">Ouvre cette page dans Chrome → Menu (⋮) → "Ajouter à l\'écran d\'accueil". Tu auras une vraie icône d\'appli en plein écran sans la barre du navigateur.</div>';
   html+='</div>';
 
-  html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px;">HOME PEA v3.5.7</div>';
+  html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px;">HOME PEA v3.5.8</div>';
 
   return html;
 }
@@ -2505,7 +2505,15 @@ function importAll(e){
       if(!confirm('Importer '+imported.length+' actif(s) ? Cela remplace tout.'))return;
       // Dépôts : format nouveau (data.depots) OU migration depuis anciens virements par-ETF
       if(data.depots && data.depots.length){
-        peaDepots=data.depots.map(function(v){return {id:v.id||Date.now()+Math.random(),date:v.date,amount:v.amount};});
+        peaDepots=data.depots.map(function(v){
+          var d={id:v.id||Date.now()+Math.random(),date:v.date,amount:v.amount};
+          if(v.type) d.type=v.type;
+          if(v.gain!==undefined) d.gain=v.gain;
+          if(v.ticker) d.ticker=v.ticker;
+          if(v.parts) d.parts=v.parts;
+          if(v.prixVente) d.prixVente=v.prixVente;
+          return d;
+        });
       } else {
         peaDepots=[];
         imported.forEach(function(a){ if(a.virements&&a.virements.length){ a.virements.forEach(function(v){ peaDepots.push({id:v.id||Date.now()+Math.random(),date:v.date,amount:v.amount}); }); } });
